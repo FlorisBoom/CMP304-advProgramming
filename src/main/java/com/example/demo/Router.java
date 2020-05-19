@@ -2,15 +2,18 @@ package com.example.demo;
 
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.*;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.cloud.FirestoreClient;
 import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.json.simple.JSONObject;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
@@ -31,6 +35,7 @@ import static org.springframework.web.bind.annotation.RequestMethod.POST;
 public class Router {
 
     Firestore db;
+    String id = "";
 
     public Router() throws IOException {
         InputStream serviceAccount = new FileInputStream("cmp304-advprogramming-firebase-adminsdk-eaken-75845526b6.json");
@@ -64,22 +69,7 @@ public class Router {
     }
 
     @RequestMapping(value = "/book", method = POST)
-    public String book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") String seat) {
-        Dotenv dotenv = Dotenv.load();
-
-
-        Stripe.apiKey = dotenv.get("STRIPE_SECRET_KEY");
-
-        PaymentIntentCreateParams params =
-                PaymentIntentCreateParams.builder()
-                        .setCurrency("eur")
-                        .setAmount(1099L)
-                        // Verify your integration in this guide by including this parameter
-                        .putMetadata("integration_check", "accept_a_payment")
-                        .build();
-
-        PaymentIntent intent = PaymentIntent.create(params);
-
+    public Timestamp book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") String seat) throws StripeException, ExecutionException, InterruptedException {
 
         Map<String, Object> docData = new HashMap<>();
         docData.put("firstName", firstName);
@@ -87,10 +77,38 @@ public class Router {
         docData.put("email", email);
         docData.put("flightId", flightId);
         docData.put("seat", seat);
+        docData.put("orderId", id);
         ApiFuture<WriteResult> booking = db.collection("bookings").document().set(docData);
 
+        ApiFuture<WriteResult> removeSeat = db.collection("flights").document(flightId).update("availSeats", FieldValue.arrayRemove(seat));
 
-        return "test";
+        EmailSender.main(email, id);
+
+        return booking.get().getUpdateTime();
+    }
+
+    @RequestMapping(value = "/secret/{email}", produces = MediaType.APPLICATION_JSON_VALUE, method = GET)
+    public Map<String, String> secret(@PathVariable String email) throws StripeException {
+        Dotenv dotenv = Dotenv.load();
+
+        DocumentReference ref = db.collection("bookings").document();
+        id = ref.getId();
+
+        Stripe.apiKey = dotenv.get("STRIPE_SECRET_KEY");
+        PaymentIntentCreateParams params =
+                PaymentIntentCreateParams.builder()
+                        .setCurrency("eur")
+                        .setAmount(5000L)
+                        .setDescription(id)
+                        .setReceiptEmail(email)
+                        .putMetadata("integration_check", "accept_a_payment")
+                        .build();
+        PaymentIntent intent = PaymentIntent.create(params);
+
+        Map<String, String> map = new HashMap();
+        map.put("client_secret", intent.getClientSecret());
+
+        return map;
     }
 
 
@@ -104,4 +122,6 @@ public class Router {
         }
         return results;
     }
+
+
 }

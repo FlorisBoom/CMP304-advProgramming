@@ -85,10 +85,12 @@
                         <div id="card-element">
 
                         </div>
+                        <div>Repeat 4242 until all card details are filled out (test card)</div>
                         <div id="card-errors" role="alert"></div>
+                        <div id="card-success" role="alert"></div>
                         <input type="hidden" id="flightId" value="" />
                         <input type="button" class="btn btn-danger" onclick="back(this);" value="Back"/>
-                        <input type="button" class="btn btn-success" onclick="bookFlight();" value="Book"/>
+                        <input type="button" class="btn btn-success" onclick="next(this); bookFlight();" value="Book"/>
                     </form>
                 </div>
             </div>
@@ -101,7 +103,7 @@
             <div class="col offset padding">
                 <div class="center">
                     <h1 class="small-h1">Booking confirmation.</h1>
-                    <p>Thank you for booking this flight. A confirmation e-mail, including your ticket has been sent to you.
+                    <p>Thank you for booking this flight. A confirmation e-mail has been sent to you.
                         The e-mail includes your booking order number, which can be used to find your booked flight and update details.</p>
                 </div>
             </div>
@@ -110,7 +112,7 @@
 </div>
 
 <!--
-TODO: Stripe afmaken, prijs overal bekend maken, email sturen met code die in bookings word opgeslagen om je booking op de homepagina te vinden
+TODO: Email sturen met ordernummer om vluchten op te zoeken op home page
 TODO: Login maken voor werknemers om alle vluchten in te zien
 -->
 
@@ -165,7 +167,6 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
             type: "get",
             success: function (data) {
                 seats = data[flightId].availSeats
-                console.log(data[flightId].price)
                 $('#price').html('Price: ' + '€' + data[flightId].price)
                 for( let i = 0; i <  seats.length; i++ ) {
                     let option = seats[i]
@@ -194,13 +195,17 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
                 const container = $(".card-container");
                 let card, cardBody, cardTitle, cardText, cardButton, date;
                 for (let k in data) {
-                    date = new Date(data[k].departureDate.seconds * 1000);
-                    card = $("<div>").addClass("card").appendTo(container);
-                    cardBody = $("<div>").addClass("card-body").appendTo(card);
-                    cardTitle = $("<h5>").addClass("card-title").html(data[k].takeOff + " - " + data[k].destination).appendTo(cardBody);
-                    cardText = $("<p>").addClass("card-text").html("<b>Departure:</b> " + date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + "     " + data[k].departureTime + " <b>Flight length:</b> " + data[k].duration).appendTo(cardBody);
-                    cardButton = $("<input type='button' onclick='next(this); setFlightIdAndSeats(this);'>").addClass("btn btn-success").val("Book flight").appendTo(cardBody);
-                    $("<input type='hidden'>").val(k).appendTo(cardBody);
+                    if( !Array.isArray(data[k].availSeats) || !data[k].availSeats.length) {
+
+                    } else {
+                        date = new Date(data[k].departureDate.seconds * 1000);
+                        card = $("<div>").addClass("card").appendTo(container);
+                        cardBody = $("<div>").addClass("card-body").appendTo(card);
+                        cardTitle = $("<h5>").addClass("card-title").html(data[k].takeOff + " - " + data[k].destination).appendTo(cardBody);
+                        cardText = $("<p>").addClass("card-text").html("<b>Departure:</b> " + date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + "     " + data[k].departureTime + " <b>Flight length:</b> " + data[k].duration).appendTo(cardBody);
+                        cardButton = $("<input type='button' onclick='next(this); setFlightIdAndSeats(this);'>").addClass("btn btn-success").val("Book flight").appendTo(cardBody);
+                        $("<input type='hidden'>").val(k).appendTo(cardBody);
+                    }
                 }
             },
             error: function () {
@@ -211,23 +216,63 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
 
     function bookFlight() {
 
-        const firstName = $( "#firstName" ).val();
-        const lastName = $( "#lastName" ).val();
-        const email = $( "#email" ).val();
-        const flightId = $( "#flightId" ).val();
-        const seat = $( "#seatSelect" ).val();
+        const firstName = $( "#firstName" ).val()
+        const lastName = $( "#lastName" ).val()
+        const email = $( "#email" ).val()
+        const flightId = $( "#flightId" ).val()
+        const seat = $( "#seatSelect" ).val()
+        let clientSecret = ""
 
-        $.ajax({
-            url: "/book",
-            type: "post",
-            data: {firstName: firstName, lastName: lastName, email: email, seat: seat, flightId: flightId},
-            success: function (data) {
-                console.log(data);
-            },
-            error: function () {
-                console.log( "whoops" )
-            }
+        var response = fetch('/secret/'+email).then(function(response) {
+            return response.json();
+        }).then(function(responseJson) {
+            clientSecret = responseJson.client_secret;
+            stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: card,
+                    billing_details: {
+                        name: firstName + lastName,
+                        email: email
+                    }
+                }
+            }).then(function(result) {
+                if (result.error) {
+                    document.getElementById("card-errors").html(result.error.message)
+                    console.log(result.error.message);
+                } else {
+                    if (result.paymentIntent.status === 'succeeded') {
+                        console.log(result.paymentIntent)
+                        $.ajax({
+                            url: '/book',
+                            type: 'post',
+                            data: {firstName: firstName, lastName: lastName, email: email, flightId: flightId, seat: seat},
+                            success: function (data) {
+                                console.log(data)
+                            },
+                            error: function (err) {
+                                console.log(err)
+                            }
+                        })
+                    }
+                }
+            });
         });
+
+
+
+
+
+        // $.ajax({
+        //     url: "/book",
+        //     type: "post",
+        //     data: {firstName: firstName, lastName: lastName, email: email, seat: seat, flightId: flightId},
+        //     success: function (data) {
+        //         console.log(data);
+        //     },
+        //     error: function () {
+        //         console.log( "whoops" )
+        //     }
+        // });
     }
 
 </script>

@@ -46,7 +46,12 @@ body {
 
 #card-errors {
     color: red;
-    margin-bottom: 15px
+    margin-bottom: 15px;
+}
+
+#card-success {
+    color: green;
+    margin-bottom: 15px;
 }
 
 #price {
