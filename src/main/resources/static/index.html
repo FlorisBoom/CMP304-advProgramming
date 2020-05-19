@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="//stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
     <title>Home</title>
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 
@@ -59,7 +61,8 @@
             <div class="col offset padding">
                 <div class="center">
                     <h1 class="small-h1">Enter your personal details.</h1>
-                    <form>
+                    <h3 id="price"> </h3>
+                    <form id="payment-form">
                         <div class="form-row">
                             <div class="form-group col-md-6">
                                 <label for="firstName">First name:</label>
@@ -77,27 +80,15 @@
                         <div class="form-group">
                             <label for="email">Choose seat:</label>
                             <select id="seatSelect" class="form-control">
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                                <option value="5">5</option>
-                                <option value="6">6</option>
-                                <option value="7">7</option>
-                                <option value="8">8</option>
-                                <option value="9">9</option>
-                                <option value="10">10</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                                <option value="13">13</option>
-                                <option value="14">14</option>
-                                <option value="15">15</option>
-                                <option value="16">16</option>
                             </select>
                         </div>
+                        <div id="card-element">
+
+                        </div>
+                        <div id="card-errors" role="alert"></div>
                         <input type="hidden" id="flightId" value="" />
                         <input type="button" class="btn btn-danger" onclick="back(this);" value="Back"/>
-                        <input type="button" class="btn btn-success" onclick="next(this);" value="Next"/>
+                        <input type="button" class="btn btn-success" onclick="bookFlight();" value="Book"/>
                     </form>
                 </div>
             </div>
@@ -119,14 +110,33 @@
 </div>
 
 <!--
-TODO: Modal maken waar gebruiker zijn details invult en stoel kiest, vervolgens moet er een code gestuurd worden naar de meegegeven email.
-TODO: Deze kan gebruikt worden door op de homepagine te zoeken naar de code en vervolgens vlucht details aan te passen (simpele dropdown field maken)(Code die gemaakt word is document ID)
-TODO: Payment systeem?
+TODO: Stripe afmaken, prijs overal bekend maken, email sturen met code die in bookings word opgeslagen om je booking op de homepagina te vinden
 TODO: Login maken voor werknemers om alle vluchten in te zien
 -->
 
 <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <script>
+
+    var stripe = Stripe('pk_test_J2kCgWmod3DVyCRNIOoyb2zt00YX8RBCE4');
+    var elements = stripe.elements();
+
+    var style = {
+        base: {
+            color: "#32325d",
+        }
+    };
+
+    var card = elements.create("card", { style: style });
+    card.mount("#card-element");
+
+    card.on('change', ({error}) => {
+        const displayError = document.getElementById('card-errors');
+        if (error) {
+            displayError.textContent = error.message;
+        } else {
+            displayError.textContent = '';
+        }
+    });
 
     function next(currentCard) {
         if( $(currentCard.closest( ".container" )).find( "input" ).val().length !== 0 ) {
@@ -146,58 +156,78 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
         $( ".card-container" ).empty();
     }
 
-    function sendFlightId(button) {
-        const flightId = $(button.closest( ".container" )).find( "input[type=hidden" ).val();
+    function setFlightIdAndSeats(button) {
+        const flightId = $(button.closest( ".container" )).find( "input[type=hidden]" ).val();
+        const seatSelect = document.getElementById("seatSelect")
+        let seats = []
+        $.ajax({
+            url: "/flight/"+flightId,
+            type: "get",
+            success: function (data) {
+                seats = data[flightId].availSeats
+                console.log(data[flightId].price)
+                $('#price').html('Price: ' + '€' + data[flightId].price)
+                for( let i = 0; i <  seats.length; i++ ) {
+                    let option = seats[i]
+                    let el = document.createElement( "option" )
+                    el.textContent = option
+                    el.value = option
+                    seatSelect.appendChild(el)
+                }
+            },
+            error: function (err) {
+                console.error(err)
+            }
+        })
         $( "#flightId" ).val(flightId);
     }
 
     function getFlights() {
 
-        const date =  new Date($( "#dayInput" ).val());
-        const airport = $( "#airportSelect option:selected" ).text();
+        const date = new Date($("#dayInput").val());
+        const airport = $("#airportSelect option:selected").text();
 
         $.ajax({
-            url: "/flights/"+date+"/"+airport,
+            url: "/flights/" + date + "/" + airport,
             type: "get",
-            success: function(data) {
-                console.log(data);
-                const container = $( ".card-container" );
+            success: function (data) {
+                const container = $(".card-container");
                 let card, cardBody, cardTitle, cardText, cardButton, date;
                 for (let k in data) {
                     date = new Date(data[k].departureDate.seconds * 1000);
-                    card = $( "<div>" ).addClass( "card" ).appendTo(container);
-                    cardBody = $( "<div>" ).addClass( "card-body" ).appendTo(card);
-                    cardTitle = $( "<h5>" ).addClass( "card-title" ).html(data[k].takeOff + " - " + data[k].destination).appendTo(cardBody);
-                    cardText = $( "<p>" ).addClass( "card-text" ).html("<b>Departure:</b> " + date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + "     " + data[k].departureTime + " <b>Flight length:</b> " + data[k].duration).appendTo(cardBody);
-                    cardButton = $( "<input type='button' onclick='next(this); sendFlightId(this);'>" ).addClass( "btn btn-success" ).val( "Book flight" ).appendTo(cardBody);
-                    $( "<input type='hidden'>").val(k).appendTo(cardBody);
+                    card = $("<div>").addClass("card").appendTo(container);
+                    cardBody = $("<div>").addClass("card-body").appendTo(card);
+                    cardTitle = $("<h5>").addClass("card-title").html(data[k].takeOff + " - " + data[k].destination).appendTo(cardBody);
+                    cardText = $("<p>").addClass("card-text").html("<b>Departure:</b> " + date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear() + "     " + data[k].departureTime + " <b>Flight length:</b> " + data[k].duration).appendTo(cardBody);
+                    cardButton = $("<input type='button' onclick='next(this); setFlightIdAndSeats(this);'>").addClass("btn btn-success").val("Book flight").appendTo(cardBody);
+                    $("<input type='hidden'>").val(k).appendTo(cardBody);
                 }
             },
-            error: function() {
-                console.log( "woops something went wrong" )
+            error: function () {
+                console.log("woops something went wrong")
             }
         })
+    }
 
-        function bookFlight() {
+    function bookFlight() {
 
-            const firstName = $( "#firstName" ).val();
-            const lastName = $( "#lastName" ).val();
-            const email = $( "#email" ).val();
-            const flightId = $( "#flightId" ).val();
-            const seat = $( "#seatSelect" ).val();
+        const firstName = $( "#firstName" ).val();
+        const lastName = $( "#lastName" ).val();
+        const email = $( "#email" ).val();
+        const flightId = $( "#flightId" ).val();
+        const seat = $( "#seatSelect" ).val();
 
-            $.ajax({
-               url: "/book",
-               type: "post",
-               data: {firstName: firstName, lastName: lastName, email: email, seat: seat, flightId: flightId},
-               success: function (data) {
-                    console.log(data);
-               },
-               error: function () {
+        $.ajax({
+            url: "/book",
+            type: "post",
+            data: {firstName: firstName, lastName: lastName, email: email, seat: seat, flightId: flightId},
+            success: function (data) {
+                console.log(data);
+            },
+            error: function () {
                 console.log( "whoops" )
-               }
-            });
-        }
+            }
+        });
     }
 
 </script>

@@ -1,28 +1,31 @@
 package com.example.demo;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.*;
-import com.google.firebase.cloud.FirestoreClient;
-import com.google.protobuf.Api;
-import org.json.simple.JSONObject;
-import org.springframework.web.bind.annotation.*;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.firestore.*;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import com.google.firebase.cloud.FirestoreClient;
+import com.stripe.Stripe;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
+import io.github.cdimascio.dotenv.Dotenv;
+import org.json.simple.JSONObject;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.constraints.Email;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.springframework.web.bind.annotation.RequestMethod.*;
+import static org.springframework.web.bind.annotation.RequestMethod.GET;
+import static org.springframework.web.bind.annotation.RequestMethod.POST;
 
 @RestController
 public class Router {
@@ -39,7 +42,6 @@ public class Router {
         db = FirestoreClient.getFirestore();
     }
 
-
     @RequestMapping(value = "/flights/{date}/{airport}", method = GET)
     public JSONObject flights(@PathVariable("date") Date date, @PathVariable("airport") String airport) throws Exception {
         JSONObject results = new JSONObject();
@@ -51,8 +53,34 @@ public class Router {
         return results;
     }
 
+    @RequestMapping(value = "/flight/{id}", method = GET)
+    public JSONObject flights(@PathVariable("id") String id) throws Exception {
+        JSONObject results = new JSONObject();
+        DocumentReference docRef = db.collection("flights").document(id);
+        ApiFuture<DocumentSnapshot> flight = docRef.get();
+        DocumentSnapshot document = flight.get();
+        results.put(document.getId(), document.getData());
+        return results;
+    }
+
     @RequestMapping(value = "/book", method = POST)
     public String book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") String seat) {
+        Dotenv dotenv = Dotenv.load();
+
+
+        Stripe.apiKey = dotenv.get("STRIPE_SECRET_KEY");
+
+        PaymentIntentCreateParams params =
+                PaymentIntentCreateParams.builder()
+                        .setCurrency("eur")
+                        .setAmount(1099L)
+                        // Verify your integration in this guide by including this parameter
+                        .putMetadata("integration_check", "accept_a_payment")
+                        .build();
+
+        PaymentIntent intent = PaymentIntent.create(params);
+
+
         Map<String, Object> docData = new HashMap<>();
         docData.put("firstName", firstName);
         docData.put("lastName", lastName);

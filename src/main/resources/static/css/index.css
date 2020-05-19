@@ -36,3 +36,19 @@ body {
 .disabled {
     display: none;
 }
+
+#card-element {
+    margin: 35px 0px;
+    padding: 15px;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+}
+
+#card-errors {
+    color: red;
+    margin-bottom: 15px
+}
+
+#price {
+    font-size: 18px;
+}
