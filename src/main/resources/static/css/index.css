@@ -8,15 +8,22 @@ body {
     display: flex;
     align-items: center;
 }
-
 .col {
     background-color: #ffffff;
     border-radius: 5px;
 }
 
+.lookup {
+    margin-bottom: 100px;
+}
+
 .offset {
     margin-right: 25%;
     margin-left: 25%;
+}
+
+.no-margin {
+    margin: 0px !important;
 }
 
 .center {
@@ -34,6 +41,10 @@ body {
 }
 
 .disabled {
+    display: none;
+}
+
+.lookupResults {
     display: none;
 }
 

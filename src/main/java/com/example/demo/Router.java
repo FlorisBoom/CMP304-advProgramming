@@ -112,6 +112,24 @@ public class Router {
     }
 
 
+    @RequestMapping(value = "/flightByOrder/{orderNumber}", method = GET)
+    public JSONObject flightByOrder(@PathVariable String orderNumber) throws ExecutionException, InterruptedException {
+        JSONObject flightDetails = new JSONObject();
+        String flightId = "";
+        ApiFuture<QuerySnapshot> querySnapshot = db.collection("bookings").whereEqualTo("orderId", orderNumber).get();
+        List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+        for (DocumentSnapshot document : documents) {
+            flightDetails.put(0, document.getData());
+            flightId = document.getString("flightId");
+            DocumentReference docRef = db.collection("flights").document(flightId);
+            ApiFuture<DocumentSnapshot> flight = docRef.get();
+            DocumentSnapshot document2 = flight.get();
+            flightDetails.put(1, document2.getData());
+        }
+
+        return flightDetails;
+    }
+
     @RequestMapping(value = "/test", method = GET)
     public JSONObject test() throws Exception {
         JSONObject results = new JSONObject();

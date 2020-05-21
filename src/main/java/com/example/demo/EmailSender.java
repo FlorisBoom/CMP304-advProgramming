@@ -28,7 +28,7 @@ public class EmailSender {
     public static void main(String email, String id) {
 
         EMAIL_TO = email;
-        EMAIL_TEXT = "Ur confirmation for booking flight: " + id + "/n" + "Use this on the homepage to lookup flight details";
+        EMAIL_TEXT = "Ur confirmation for booking flight: " + id + "\n" + "Use this on the homepage to lookup flight details";
 
         Properties prop = System.getProperties();
         prop.put("mail.smtp.host", SMTP_SERVER); //optional, defined in SMTPTransport
