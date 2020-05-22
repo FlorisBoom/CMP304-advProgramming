@@ -13,7 +13,7 @@
 <div class="vertical-container">
     <div class="container lookup disabled">
         <!-- Order number lookup -->
-        <div class="row" style="margin-bottom: 100px">
+        <div class="row lookupRow" style="margin-bottom: 100px">
             <div class="col offset padding">
                 <div class="center">
                     <h1 class="small-h1">Fill out order number to view flight details.</h1>
@@ -31,10 +31,10 @@
         </div>
 
         <!-- Fligth by order result -->
-        <div class="row lookupResults disabled">
+        <div class="row lookupResults disabled" id="print-content">
             <div class="col offset padding">
                 <div class="center">
-                    <h1 class="small-h1"></h1>
+                    <h1 class="small-h1" id="lookUpResultsTitle">Detail for flight </h1>
                     <div class="form-row">
                         <div class="form-group col-md-6">
                             <label for="firstNameLookUp">First name:</label>
@@ -45,24 +45,33 @@
                             <p id="lastNameLookUp"></p>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="emailLookUp">Email</label>
-                        <p id="emailLookUp"></p>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="emailLookUp">Email</label>
+                            <p id="emailLookUp"></p>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="seatLookUp">Seat</label>
+                            <p id="seatLookUp"></p>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="seatLookUp">Seat</label>
-                        <p id="seatLookUp"></p>
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label for="departureTime">Departure time</label>
+                            <p id="departureTime"></p>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="durationTime">Flight duration</label>
+                            <p id="durationTime"></p>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="date">Flight date</label>
+                            <p id="date"></p>
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label for="tripLookUp">Trip</label>
-                        <p id="tripLookUp"></p>
-                    </div>
-                    <div class="form-group">
-                        <label for="timeLookUp">Time</label>
-                        <p id="timeLookUp"></p>
-                    </div>
-                    <div class="form-group">
-                        <input type="button" value="print" />
+                        <input type="button" class="btn btn-info" value="print" onclick="printDiv('print-content')"/>
                     </div>
                 </div>
             </div>
@@ -88,8 +97,9 @@
                             </select>
                         </div>
                         <div class="form-group no-margin">
-                            <input type="button" class="btn btn-success" value="Lookup existing flight with order number" onclick="back(this);"/>
+                            <input type="button" class="btn btn-primary" value="Lookup existing flight with order number" onclick="back(this);"/>
                             <input type="button" class="btn btn-success" value="Next" onclick="getFlights(); next(this);">
+                            <button type="button" class="btn btn-info"><a href="login.html">Staff Login</a></button>
                         </div>
                     </form>
                 </div>
@@ -167,6 +177,7 @@
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -206,22 +217,57 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
             type: "get",
             success: function (data) {
                 console.log(data)
-                // $(".lookup").fadeOut( "fast", function () {
-                    // $(".lookupResults").fadeIn( "fast", function () {})
-                $(".lookupResults").removeClass("disabled")
-                // })
-                // $(".firstCard").fadeOut( "fast", function () {})
+                $(".lookupRow").fadeOut( "fast", function () {
+                    $(".lookupResults").removeClass("lookupResults")
+                })
+                const date = new Date(data[1].departureDate.seconds * 1000)
+                const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit' })
+                const [{ value: month },,{ value: day },,{ value: year }] = dateTimeFormat.formatToParts(date )
+
+                $("#lookUpResultsTitle").html("Details regarding flight:  " + data[1].takeOff + " - " + data[1].destination)
                 $("#firstNameLookUp").html(data[0].firstName)
                 $("#lastNameLookUp").html(data[0].lastName)
                 $("#emailLookUp").html(data[0].email)
                 $("#seatLookUp").html(data[0].seat)
-                $("#tripLookUp").html(data[1].takeOff + " - " + data[1].destination)
-                $("#timeLookUp").html(data[1].departureDate)
+                $("#departureTime").html(data[1].departureTime)
+                $("#durationTime").html(data[1].duration)
+                $("#date").html(`${day}-${month}-${year }`)
             },
             error: function (error) {
                 console.log(error)
             }
         })
+    }
+
+    function admin() {
+        $.ajax({
+            url: "/allFlights",
+            type: "get",
+            success: function (data) {
+                for ( let flight in data ) {
+                    let tr = "<tr>";
+                    tr += "<td>" + data[flight].takeOff + "</td>"
+                    tr += "<td>" + data[flight].destination + "</td>"
+                    tr += "</td>"
+                    table += tr
+                }
+                document.getElementById("adminTable").innerHTML += table
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function printDiv(divName) {
+        let printContents = document.getElementById(divName).innerHTML;
+        w = window.open();
+        w.document.write('<html><head><title>Print it!</title><link rel="stylesheet" type="text/css" href="/css/index.css"></head><body>');
+        w.document.write(printContents);
+        w.document.write('</body></html>');
+        w.document.close();
+        w.focus();
+        w.print();
     }
 
     function next(currentCard) {

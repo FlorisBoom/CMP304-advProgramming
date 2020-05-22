@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="//stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/index.css">
+    <title>Login</title>
+</head>
+<body>
+<div class="vertical-container">
+    <div class="container">
+        <div class="row">
+            <div class="col offset padding">
+                <div class="center">
+                    <h1 class="small-h1">Login:</h1>
+                    <div id="error"></div>
+                    <form>
+                        <div class="form-group">
+                            <input type="text" class="form-control" id="username" placeholder="Username" required/>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-control" id="password" placeholder="Password" required/>
+                        </div>
+                        <div class="form-group no-margin">
+                            <input type="button" class="btn btn-success" onclick="login()" value="Login">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script>
+    function login() {
+        const email = $('#username').val()
+        const passWord = $('#password').val()
+        $.ajax({
+            url: '/login',
+            type: 'post',
+            data: { email: email, password: passWord},
+            success: function (data) {
+                if (data.error) {
+                    $("#error").html(data.error.message)
+                } else {
+                    window.location.replace("http://localhost:8070/admin.html")
+                }
+                console.log(data)
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+
+</script>
+</body>
+</html>

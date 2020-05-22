@@ -2,9 +2,286 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <link rel="stylesheet" href="/css/index.css">
+    <link rel="stylesheet" href="//stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <title>Admin</title>
 </head>
 <body>
 <!-- staff panel to change records -->
+<div class="vertical-container">
+    <div class="container">
+        <div class="row bookingRow" style="margin-bottom: 100px;">
+            <div class="col padding">
+                <div class="center">
+                    <h1 class="small-h1">All bookings:</h1>
+                    <table id="bookingTable">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Seat</th>
+                            <th>Flight id</th>
+                            <th>Order id</th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="row flightRow">
+            <div class="col padding">
+                <div class="center">
+                    <h1 class="small-h1">All Flights:</h1>
+                    <table id="flightTable">
+                        <tr>
+                            <th>Flight id</th>
+                            <th>Take off</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="row editRow disabled">
+            <div class="col padding">
+                <div class="center">
+                    <form id="editForm">
+                        <div class="form-group">
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script>
+    $(document).ready(function() {
+        let flightTable = ""
+        let bookingTable = ""
+
+        $.ajax({
+            url: "/getToken",
+            type: "get",
+            success: function (data) {
+                if (data) {
+                    console.log(data)
+                } else {
+                    window.location.replace("http://localhost:8070/login.html")
+                }
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+
+        $.ajax({
+            url: "/allFlights",
+            type: "get",
+            success: function (data) {
+                console.log(data)
+                for ( let flight in data ) {
+                    const date = new Date(data[flight].departureDate.seconds * 1000)
+                    const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit' })
+                    const [{ value: month },,{ value: day },,{ value: year }] = dateTimeFormat.formatToParts(date )
+                    let tr = "<tr id='"+flight+"'>"
+                    tr += "<td>" + flight + "</td>"
+                    tr += "<td>" + data[flight].takeOff + "</td>"
+                    tr += "<td>" + data[flight].destination + "</td>"
+                    tr += "<td>" + `${day}-${month}-${year }` + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-info' onclick='printDiv("+flight+")'>Print</button>" + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-danger' onclick='deleteFlight("+flight+")'>Delete</button>" + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-warning' onclick='editFlight("+flight+")'>Edit</button>" + "</td>"
+                    tr += "</td>"
+                    flightTable += tr
+                }
+                document.getElementById("flightTable").innerHTML += flightTable
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+
+        $.ajax({
+            url: "/allBookings",
+            type: "get",
+            success: function (data) {
+                for ( let booking in data ) {
+                    let tr = "<tr id='"+booking+"'>";
+                    tr += "<td>" + data[booking].firstName + " " + data[booking].lastName + "</td>"
+                    tr += "<td>" + data[booking].email + "</td>"
+                    tr += "<td>" + data[booking].seat + "</td>"
+                    tr += "<td>" + data[booking].flightId + "</td>"
+                    tr += "<td>" + data[booking].orderId + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-info' onclick='printDiv("+booking+")'>Print</button>" + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-danger' onclick='deleteBooking("+booking+")'>Delete</button>" + "</td>"
+                    tr += "<td style='border: 0'>" + "<button class='btn btn-warning' onclick='editBooking("+booking+")'>Edit</button>" + "</td>"
+                    tr += "</td>"
+                    bookingTable += tr
+                }
+                document.getElementById("bookingTable").innerHTML += bookingTable
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+
+
+    })
+    function printDiv(divName) {
+        console.log(divName.innerHTML)
+        let printContents = divName.innerHTML;
+        w = window.open();
+        w.document.write('<html><head><title>Print it!</title><link rel="stylesheet" type="text/css" href="/css/index.css"></head><body>');
+        w.document.write(printContents);
+        w.document.write('</body></html>');
+        w.document.close();
+        w.focus();
+        w.print();
+    }
+
+    function deleteBooking(id) {
+        let documentId = id.id
+        $.ajax({
+            url: "/deleteBooking",
+            method: "post",
+            data: { id: documentId },
+            success: function (data) {
+                if(data) {
+                    $('#'+documentId).fadeOut( "fast", function () {})
+                }
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function deleteFlight(id) {
+        let documentId = id.id
+        $.ajax({
+            url: "/deleteFlight",
+            method: "post",
+            data: { id: id },
+            success: function (data) {
+                if(data) {
+                    $('#'+documentId).fadeOut( "fast", function () {})
+                }
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function editBooking(id) {
+        let editFormDiv = ""
+        let documentId = id.id
+        $('.editRow').fadeIn( "fast", function () {})
+        $.ajax({
+            url: "/booking/"+documentId,
+            method: "get",
+            success: function (data) {
+                $('.flightRow').fadeOut( "fast", function () {})
+                $('.bookingRow').fadeOut( "fast", function () {})
+                for ( let booking in data ) {
+                    let formDiv = "<div id='"+booking+"' class='form-group'>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='firstname'>First name: </label>"
+                    formDiv += "<input type='text' class='form-control' id='firstname' value='"+data[booking].firstName+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='lastname'>Last name: </label>"
+                    formDiv += "<input type='text' class='form-control' id='lastname' value='"+data[booking].lastName+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='email'>Email: </label>"
+                    formDiv += "<input type='text' class='form-control' id='email' value='"+data[booking].email+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='seat'>Seat: </label>"
+                    formDiv += "<input type='text' class='form-control' id='seat' value='"+data[booking].seat+"' >"
+                    formDiv += "<input type='hidden' class='form-control' id='seatOld' value='"+data[booking].seat+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<input type='button' class='btn btn-success' value='Save' onclick='save();'>"
+                    formDiv += "<input type='button' class='btn btn-danger' value='back' onclick='back();'>"
+                    formDiv += "</div>"
+                    editFormDiv += formDiv
+                }
+                document.getElementById("editForm").innerHTML += editFormDiv
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+
+    }
+
+    function editFlight(id) {
+        let documentId = id.id
+        $.ajax({
+            url: "/flight/"+documentId,
+            method: "get",
+            success: function (data) {
+                console.log(data)
+                $('.flightRow').fadeOut( "fast", function () {})
+                $('.bookingRow').fadeOut( "fast", function () {})
+                for ( let flight in data ) {
+                    let formDiv = "<div id='"+flight+"' class='form-group'>"
+                    formDiv += "<input type='text' value='"+data[flight].destination+"' >"
+                    formDiv += "<input type='text' value='"+data[flight].takeOff+"' >"
+                    formDiv += "<input type='button' class='btn btn-success' value='confirm' onclick='save();'>"
+                    editFormDiv += formDiv
+                }
+                document.getElementById("editForm").innerHTML += editFormDiv
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function saveBooking() {
+        let firstName = $('#firstname').val()
+        let lastName = $('#lastname').val()
+        let email = $('#email').val()
+        let oldSeat = $('seatOld').val()
+        let seat = $('#seat').val()
+        $.ajax({
+            url: "/saveBooking",
+            method: "POST",
+            data: { firstName: firstName, lastName: lastName, email: email, seat: seat, oldSeat: oldSeat},
+            success: function (data) {
+                console.log(data)
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function saveFlight() {
+        $.ajax({
+            url: "/saveFlight",
+            method: "POST",
+            data: {},
+            success: function (data) {
+                console.log(data)
+            },
+            error: function (err) {
+                console.log(err)
+            }
+        })
+    }
+
+    function back() {
+        $('.flightRow').fadeIn( "fast", function () {})
+        $('.bookingRow').fadeIn( "fast", function () {})
+        $('.editRow').fadeOut( "fast", function () {})
+    }
+</script>
 </body>
 </html>
