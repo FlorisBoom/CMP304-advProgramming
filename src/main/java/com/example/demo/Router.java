@@ -91,7 +91,7 @@ public class Router {
     }
 
     @RequestMapping(value = "/book", method = POST)
-    public Timestamp book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") String seat) throws StripeException, ExecutionException, InterruptedException {
+    public Timestamp book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") int seat) throws StripeException, ExecutionException, InterruptedException {
 
         Map<String, Object> docData = new HashMap<>();
         docData.put("firstName", firstName);
@@ -225,6 +225,50 @@ public class Router {
 
         return id;
     }
+
+    @RequestMapping(value = "/saveBooking", method = POST)
+    public String saveBooking(@RequestParam("id") String id, @RequestParam("flightId") String flightId, @RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("seat") int seat, @RequestParam("oldSeat") int oldSeat) throws ExecutionException, InterruptedException {
+
+        String message = "";
+
+        CollectionReference bookingsCol = db.collection("bookings");
+        Query checkForSeats = bookingsCol.whereEqualTo("flightId", flightId).whereEqualTo("seat", seat);
+        ApiFuture<QuerySnapshot> querySnapshot = checkForSeats.get();
+        for (DocumentSnapshot document: querySnapshot.get().getDocuments()) {
+             message = "Seat already taken!";
+             return message;
+        }
+
+
+        DocumentReference docRef = db.collection("bookings").document(id);
+        ApiFuture<WriteResult> booking = docRef.update("firstName", firstName, "lastName", lastName, "email", email, "seat", seat);
+        WriteResult result = booking.get();
+
+        DocumentReference docRefFlight = db.collection("flights").document(flightId);
+
+        ApiFuture<WriteResult> flightAddSeat = docRefFlight.update("availSeats", FieldValue.arrayUnion(oldSeat));
+        ApiFuture<WriteResult> flightRemoveSeat = docRefFlight.update("availSeats", FieldValue.arrayRemove(seat));
+
+
+
+        message = "Changes saved!";
+        return message;
+    }
+
+    @RequestMapping(value = "/saveFlight", method = POST)
+    public String saveFlight(@RequestParam("id") String id, @RequestParam("takeOff") String takeOff, @RequestParam("destination") String destination, @RequestParam("duration") String duration, @RequestParam("departureTime") String departureTime, @RequestParam("departureDate") Date departureDate, @RequestParam("price") int price) throws ExecutionException, InterruptedException {
+
+        String message = "";
+
+        DocumentReference docRef = db.collection("flights").document(id);
+        ApiFuture<WriteResult> flight = docRef.update("takeOff", takeOff, "destination", destination, "duration", duration, "departureTime", departureTime, "departureDate", departureDate, "price", price);
+        WriteResult result = flight.get();
+
+        message = "Changes saved!";
+        return message;
+    }
+
+
 
     @RequestMapping(value = "/test", method = GET)
     public JSONObject test() throws Exception {

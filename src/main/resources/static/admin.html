@@ -81,7 +81,6 @@
             url: "/allFlights",
             type: "get",
             success: function (data) {
-                console.log(data)
                 for ( let flight in data ) {
                     const date = new Date(data[flight].departureDate.seconds * 1000)
                     const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit' })
@@ -131,7 +130,6 @@
 
     })
     function printDiv(divName) {
-        console.log(divName.innerHTML)
         let printContents = divName.innerHTML;
         w = window.open();
         w.document.write('<html><head><title>Print it!</title><link rel="stylesheet" type="text/css" href="/css/index.css"></head><body>');
@@ -189,6 +187,7 @@
                 for ( let booking in data ) {
                     let formDiv = "<div id='"+booking+"' class='form-group'>"
                     formDiv += "<div class='form-group'>"
+                    formDiv += "<input type='hidden' class='form-control' id='flightId' value='"+data[booking].flightId+"' >"
                     formDiv += "<label for='firstname'>First name: </label>"
                     formDiv += "<input type='text' class='form-control' id='firstname' value='"+data[booking].firstName+"' >"
                     formDiv += "</div>"
@@ -202,12 +201,13 @@
                     formDiv += "</div>"
                     formDiv += "<div class='form-group'>"
                     formDiv += "<label for='seat'>Seat: </label>"
-                    formDiv += "<input type='text' class='form-control' id='seat' value='"+data[booking].seat+"' >"
+                    formDiv += "<input type='number' max='13' class='form-control' id='seat' value='"+data[booking].seat+"' >"
                     formDiv += "<input type='hidden' class='form-control' id='seatOld' value='"+data[booking].seat+"' >"
                     formDiv += "</div>"
                     formDiv += "<div class='form-group'>"
-                    formDiv += "<input type='button' class='btn btn-success' value='Save' onclick='save();'>"
+                    formDiv += "<input type='button' class='btn btn-success' value='Save' onclick='saveBooking("+booking+");'>"
                     formDiv += "<input type='button' class='btn btn-danger' value='back' onclick='back();'>"
+                    formDiv += "</div>"
                     formDiv += "</div>"
                     editFormDiv += formDiv
                 }
@@ -221,19 +221,48 @@
     }
 
     function editFlight(id) {
+        let editFormDiv = ""
         let documentId = id.id
         $.ajax({
             url: "/flight/"+documentId,
             method: "get",
             success: function (data) {
-                console.log(data)
                 $('.flightRow').fadeOut( "fast", function () {})
                 $('.bookingRow').fadeOut( "fast", function () {})
                 for ( let flight in data ) {
+                    const date = new Date(data[flight].departureDate.seconds * 1000)
+                    const dateTimeFormat = new Intl.DateTimeFormat('en', { year: 'numeric', month: '2-digit', day: '2-digit' })
+                    const [{ value: month },,{ value: day },,{ value: year }] = dateTimeFormat.formatToParts(date )
                     let formDiv = "<div id='"+flight+"' class='form-group'>"
-                    formDiv += "<input type='text' value='"+data[flight].destination+"' >"
-                    formDiv += "<input type='text' value='"+data[flight].takeOff+"' >"
-                    formDiv += "<input type='button' class='btn btn-success' value='confirm' onclick='save();'>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='takeOff'>Take Off: </label>"
+                    formDiv += "<input type='text' class='form-control' id='takeOff' value='"+data[flight].takeOff+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='destination'>Destination: </label>"
+                    formDiv += "<input type='text' class='form-control' id='destination' value='"+data[flight].destination+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='duration'>Flight Duration: </label>"
+                    formDiv += "<input type='time' class='form-control' id='duration' value='"+data[flight].duration+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='departureTime'>Departure Time: </label>"
+                    formDiv += "<input type='time' class='form-control' id='departureTime' value='"+data[flight].departureTime+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='departureDate'>Departure Date: </label>"
+                    formDiv += "<input type='date' class='form-control' id='departureDate' value='"+year+"-"+month+"-"+day+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<label for='price'>Price: </label>"
+                    formDiv += "<input type='text' class='form-control' id='price' value='"+data[flight].price+"' >"
+                    formDiv += "</div>"
+                    formDiv += "<div class='form-group'>"
+                    formDiv += "<input type='button' class='btn btn-success' value='confirm' onclick='saveFlight("+flight+");'>"
+                    formDiv += "<input type='button' class='btn btn-danger' value='back' onclick='back();'>"
+                    formDiv += "</div>"
+                    formDiv += "</div>"
                     editFormDiv += formDiv
                 }
                 document.getElementById("editForm").innerHTML += editFormDiv
@@ -244,18 +273,20 @@
         })
     }
 
-    function saveBooking() {
-        let firstName = $('#firstname').val()
-        let lastName = $('#lastname').val()
-        let email = $('#email').val()
-        let oldSeat = $('seatOld').val()
-        let seat = $('#seat').val()
+    function saveBooking(id) {
+        const firstName = $('#firstname').val()
+        const lastName = $('#lastname').val()
+        const email = $('#email').val()
+        const oldSeat = $('#seatOld').val()
+        const seat = $('#seat').val()
+        const flightId = $('#flightId').val()
+        const bookingId = id[0].id
         $.ajax({
             url: "/saveBooking",
             method: "POST",
-            data: { firstName: firstName, lastName: lastName, email: email, seat: seat, oldSeat: oldSeat},
+            data: { id: bookingId, flightId: flightId, firstName: firstName, lastName: lastName, email: email, seat: seat, oldSeat: oldSeat},
             success: function (data) {
-                console.log(data)
+                alert(data)
             },
             error: function (err) {
                 console.log(err)
@@ -263,13 +294,22 @@
         })
     }
 
-    function saveFlight() {
+    function saveFlight(id) {
+        const takeOff = $('#takeOff').val()
+        const destination = $('#destination').val()
+        const duration = $('#duration').val()
+        const departureTime = $('#departureTime').val()
+        const departureDate = new Date($('#departureDate').val())
+        const price = $('#price').val()
+        const flightId = id[0].id
+        console.log(typeof(departureDate))
+        console.log(new Date(departureDate))
         $.ajax({
             url: "/saveFlight",
             method: "POST",
-            data: {},
+            data: { id: flightId, takeOff: takeOff, destination: destination, duration: duration, departureTime: departureTime, departureDate: departureDate, price: price },
             success: function (data) {
-                console.log(data)
+                alert(data)
             },
             error: function (err) {
                 console.log(err)
