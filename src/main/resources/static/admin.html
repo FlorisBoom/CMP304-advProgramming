@@ -56,7 +56,7 @@
 </div>
 
 
-<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
 <script>
     $(document).ready(function() {
         let flightTable = ""
@@ -66,9 +66,7 @@
             url: "/getToken",
             type: "get",
             success: function (data) {
-                if (data) {
-                    console.log(data)
-                } else {
+                if (!data) {
                     window.location.replace("http://localhost:8070/login.html")
                 }
             },
@@ -89,10 +87,10 @@
                     tr += "<td>" + flight + "</td>"
                     tr += "<td>" + data[flight].takeOff + "</td>"
                     tr += "<td>" + data[flight].destination + "</td>"
-                    tr += "<td>" + `${day}-${month}-${year }` + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-info' onclick='printDiv("+flight+")'>Print</button>" + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-danger' onclick='deleteFlight("+flight+")'>Delete</button>" + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-warning' onclick='editFlight("+flight+")'>Edit</button>" + "</td>"
+                    tr += "<td>" + day+"-"+month+"-"+year + "</td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-info' onclick='printDiv("+flight+")'>Print</button>" + "</td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-danger' onclick='deleteFlight("+flight+")'>Delete</button>" + "</td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-warning' onclick='editFlight("+flight+")'>Edit</button>" + "</td>"
                     tr += "</td>"
                     flightTable += tr
                 }
@@ -108,15 +106,15 @@
             type: "get",
             success: function (data) {
                 for ( let booking in data ) {
-                    let tr = "<tr id='"+booking+"'>";
+                    let tr = "<tr id='"+booking+"'>"
                     tr += "<td>" + data[booking].firstName + " " + data[booking].lastName + "</td>"
                     tr += "<td>" + data[booking].email + "</td>"
                     tr += "<td>" + data[booking].seat + "</td>"
                     tr += "<td>" + data[booking].flightId + "</td>"
                     tr += "<td>" + data[booking].orderId + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-info' onclick='printDiv("+booking+")'>Print</button>" + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-danger' onclick='deleteBooking("+booking+")'>Delete</button>" + "</td>"
-                    tr += "<td style='border: 0'>" + "<button class='btn btn-warning' onclick='editBooking("+booking+")'>Edit</button>" + "</td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-info' onclick='pri1Q    ntDiv("+booking+")'>Print</button></td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-danger' onclick='deleteBooking("+booking+")'>Delete</button></td>"
+                    tr += "<td style='border: 0; padding: 5px;'>" + "<button class='btn btn-warning' onclick='editBooking("+booking+")'>Edit</button></td>"
                     tr += "</td>"
                     bookingTable += tr
                 }
@@ -126,21 +124,21 @@
                 console.log(err)
             }
         })
-
-
-    })
+    });
     function printDiv(divName) {
-        let printContents = divName.innerHTML;
-        w = window.open();
-        w.document.write('<html><head><title>Print it!</title><link rel="stylesheet" type="text/css" href="/css/index.css"></head><body>');
-        w.document.write(printContents);
-        w.document.write('</body></html>');
-        w.document.close();
-        w.focus();
-        w.print();
+        let printContents = divName.innerHTML
+        const w = window.open()
+        w.document.write('<html><head><title>Print it!</title><link rel="stylesheet" type="text/css" href="/css/index.css"></head><body>')
+        w.document.write(printContents)
+        w.document.write('</body></html>')
+        w.document.close()
+        w.focus()
+        w.print()
     }
 
     function deleteBooking(id) {
+        console.log(id)
+        console.log("delete booking")
         let documentId = id.id
         $.ajax({
             url: "/deleteBooking",
@@ -158,6 +156,7 @@
     }
 
     function deleteFlight(id) {
+        console.log("Delete")
         let documentId = id.id
         $.ajax({
             url: "/deleteFlight",
@@ -259,7 +258,7 @@
                     formDiv += "<input type='text' class='form-control' id='price' value='"+data[flight].price+"' >"
                     formDiv += "</div>"
                     formDiv += "<div class='form-group'>"
-                    formDiv += "<input type='button' class='btn btn-success' value='confirm' onclick='saveFlight("+flight+");'>"
+                    formDiv += "<input type='button' class='btn btn-success' value='confirm' onclick='saveFlight("+flight+")'>"
                     formDiv += "<input type='button' class='btn btn-danger' value='back' onclick='back();'>"
                     formDiv += "</div>"
                     formDiv += "</div>"

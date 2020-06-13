@@ -181,11 +181,6 @@
     </div>
 </div>
 
-<!--
-TODO: Email sturen met ordernummer om vluchten op te zoeken op home page
-TODO: Login maken voor werknemers om alle vluchten in te zien
--->
-
 <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <script>
 
@@ -358,11 +353,13 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
         const flightId = $( "#flightId" ).val()
         const seat = $( "#seatSelect" ).val()
         let clientSecret = ""
+        let charge = ""
 
         var response = fetch('/secret/'+email).then(function(response) {
             return response.json();
         }).then(function(responseJson) {
-            clientSecret = responseJson.client_secret;
+            charge = responseJson.payment_intent_id
+            clientSecret = responseJson.client_secret
             stripe.confirmCardPayment(clientSecret, {
                 payment_method: {
                     card: card,
@@ -374,14 +371,14 @@ TODO: Login maken voor werknemers om alle vluchten in te zien
             }).then(function(result) {
                 if (result.error) {
                     document.getElementById("card-errors").html(result.error.message)
-                    console.log(result.error.message);
+                    console.log(result.error.message)
                 } else {
                     if (result.paymentIntent.status === 'succeeded') {
                         console.log(result.paymentIntent)
                         $.ajax({
                             url: '/book',
                             type: 'post',
-                            data: {firstName: firstName, lastName: lastName, email: email, flightId: flightId, seat: seat},
+                            data: {firstName: firstName, lastName: lastName, email: email, flightId: flightId, seat: seat, intentId: charge},
                             success: function (data) {
                                 console.log(data)
                             },

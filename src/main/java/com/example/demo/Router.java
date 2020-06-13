@@ -12,7 +12,10 @@ import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.Gson;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Charge;
+import com.stripe.model.ChargeCollection;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
 import com.stripe.param.PaymentIntentCreateParams;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.http.HttpEntity;
@@ -91,7 +94,7 @@ public class Router {
     }
 
     @RequestMapping(value = "/book", method = POST)
-    public Timestamp book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") int seat) throws StripeException, ExecutionException, InterruptedException {
+    public Timestamp book(@RequestParam("firstName") String firstName, @RequestParam("lastName") String lastName, @RequestParam("email") String email, @RequestParam("flightId") String flightId, @RequestParam("seat") int seat, @RequestParam("intentId") String intentId) throws StripeException, ExecutionException, InterruptedException {
 
         Map<String, Object> docData = new HashMap<>();
         docData.put("firstName", firstName);
@@ -100,6 +103,7 @@ public class Router {
         docData.put("flightId", flightId);
         docData.put("seat", seat);
         docData.put("orderId", id);
+        docData.put("payment_intent_id", intentId);
         ApiFuture<WriteResult> booking = db.collection("bookings").document().set(docData);
 
         ApiFuture<WriteResult> removeSeat = db.collection("flights").document(flightId).update("availSeats", FieldValue.arrayRemove(seat));
@@ -129,6 +133,7 @@ public class Router {
 
         Map<String, String> map = new HashMap();
         map.put("client_secret", intent.getClientSecret());
+        map.put("payment_intent_id", intent.getId());
 
         return map;
     }
@@ -216,10 +221,31 @@ public class Router {
     }
 
     @RequestMapping(value = "/deleteBooking", method = POST)
-    public String deleteBooking(@RequestParam("id") String id) {
+    public String deleteBooking(@RequestParam("id") String id) throws ExecutionException, InterruptedException, StripeException {
         boolean isDeleted = false;
+        Dotenv dotenv = Dotenv.load();
 
+
+        // Get booking and retrieve flight id and seat
+        DocumentReference docRef = db.collection("bookings").document(id);
+        ApiFuture<DocumentSnapshot> booking = docRef.get();
+        DocumentSnapshot document = booking.get();
+        var flightId = document.getString("flightId");
+        DocumentReference docRefFlight = db.collection("flights").document(flightId);
+        // Add seat back to flight
+        ApiFuture<WriteResult> flightAddSeat = docRefFlight.update("availSeats", FieldValue.arrayUnion(document.getLong("seat")));
+
+        // Remove booking
         ApiFuture<WriteResult> writeResult = db.collection("bookings").document(id).delete();
+
+
+        // Refund user
+        Stripe.apiKey = dotenv.get("STRIPE_SECRET_KEY");
+        Map<String, Object> params = new HashMap<>();
+        params.put(
+                "payment_intent", document.getString("payment_intent_id")
+        );
+        Refund refund = Refund.create(params);
 
         isDeleted = true;
 
@@ -267,19 +293,4 @@ public class Router {
         message = "Changes saved!";
         return message;
     }
-
-
-
-    @RequestMapping(value = "/test", method = GET)
-    public JSONObject test() throws Exception {
-        JSONObject results = new JSONObject();
-        ApiFuture<QuerySnapshot> flights = db.collection("flights").whereEqualTo("takeOff", "Newcastle").whereEqualTo("departureDate", "2020-02-29").get();
-        List<QueryDocumentSnapshot> documents = flights.get().getDocuments();
-        for (QueryDocumentSnapshot document : documents) {
-            results.put(document.getId(), document.getData());
-        }
-        return results;
-    }
-
-
 }
