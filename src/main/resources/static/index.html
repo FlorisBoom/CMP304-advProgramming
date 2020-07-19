@@ -340,7 +340,7 @@
                 }
             },
             error: function () {
-                console.log("woops something went wrong")
+                console.log("Woops something went wrong")
             }
         })
     }
@@ -355,7 +355,7 @@
         let clientSecret = ""
         let charge = ""
 
-        var response = fetch('/secret/'+email).then(function(response) {
+        const response = fetch('/secret/'+email).then(function(response) {
             return response.json();
         }).then(function(responseJson) {
             charge = responseJson.payment_intent_id
@@ -391,8 +391,6 @@
             });
         });
     }
-
 </script>
-
 </body>
 </html>

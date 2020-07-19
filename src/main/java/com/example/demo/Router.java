@@ -138,7 +138,6 @@ public class Router {
         return map;
     }
 
-
     @RequestMapping(value = "/flightByOrder/{orderNumber}", method = GET)
     public JSONObject flightByOrder(@PathVariable String orderNumber) throws ExecutionException, InterruptedException {
         JSONObject flightDetails = new JSONObject();
@@ -187,7 +186,6 @@ public class Router {
         CloseableHttpClient httpclient = HttpClients.createDefault();
         HttpPost httppost = new HttpPost(url);
 
-
         List<NameValuePair> params = new ArrayList<NameValuePair>(2);
         params.add(new BasicNameValuePair("email", email));
         params.add(new BasicNameValuePair("password", password));
@@ -225,7 +223,6 @@ public class Router {
         boolean isDeleted = false;
         Dotenv dotenv = Dotenv.load();
 
-
         // Get booking and retrieve flight id and seat
         DocumentReference docRef = db.collection("bookings").document(id);
         ApiFuture<DocumentSnapshot> booking = docRef.get();
@@ -237,7 +234,6 @@ public class Router {
 
         // Remove booking
         ApiFuture<WriteResult> writeResult = db.collection("bookings").document(id).delete();
-
 
         // Refund user
         Stripe.apiKey = dotenv.get("STRIPE_SECRET_KEY");
@@ -265,7 +261,6 @@ public class Router {
              return message;
         }
 
-
         DocumentReference docRef = db.collection("bookings").document(id);
         ApiFuture<WriteResult> booking = docRef.update("firstName", firstName, "lastName", lastName, "email", email, "seat", seat);
         WriteResult result = booking.get();
@@ -274,8 +269,6 @@ public class Router {
 
         ApiFuture<WriteResult> flightAddSeat = docRefFlight.update("availSeats", FieldValue.arrayUnion(oldSeat));
         ApiFuture<WriteResult> flightRemoveSeat = docRefFlight.update("availSeats", FieldValue.arrayRemove(seat));
-
-
 
         message = "Changes saved!";
         return message;

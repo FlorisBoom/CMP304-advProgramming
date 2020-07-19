@@ -39,7 +39,7 @@
         $.ajax({
             url: '/login',
             type: 'post',
-            data: { email: email, password: passWord},
+            data: {email: email, password: passWord},
             success: function (data) {
                 if (data.error) {
                     $("#error").html(data.error.message)
@@ -53,8 +53,6 @@
             }
         })
     }
-
-
 </script>
 </body>
 </html>
